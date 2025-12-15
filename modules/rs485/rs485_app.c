@@ -3,6 +3,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
+#include "timers.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -301,6 +302,7 @@ char *ERROR2_Response = "+E02\r";  // Parameter ERROR
 char *ERROR3_Response = "+E03\r";  // NO ready device ERROR
 
 static SemaphoreHandle_t rs485_tx_mutex;
+static TimerHandle_t gps_send_timer = NULL;
 
 volatile bool is_gugu_started = false;
 
@@ -532,19 +534,15 @@ static void base_config_complete(bool success, void *user_data)
   base_init_finished = true;
 }
 
-static void send_gps_task(void *pvParameters)
+// Software timer callback function for GPS data transmission (50ms period)
+static void gps_send_timer_callback(TimerHandle_t xTimer)
 {
   char buf[120];
-  TickType_t xLastWakeTime = xTaskGetTickCount();
 
-  while (1)
+  if (is_gugu_started)
   {
-    vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(2000));
-    if (is_gugu_started)
-    {
-      gps_format_position_data(buf);
-      RS485_Send((uint8_t *)buf, strlen(buf));
-    }
+    gps_format_position_data(buf);
+    RS485_Send((uint8_t *)buf, strlen(buf));
   }
 }
 
@@ -777,12 +775,18 @@ static void rs485_task(void *pvParameter)
         {
           lora_instance_deinit();
         }
-        
+
         gps_init_all();
         gsm_start_rover();
         RS485_Send("+GUGUSTART-LTE", strlen("+GUGUSTART-LTE"));
         active_status = RTK_ACTIVE_STATUS_GSM;
         is_gugu_started = true;
+
+        // Start GPS send timer (50ms period)
+        if (gps_send_timer != NULL)
+        {
+          xTimerStart(gps_send_timer, 0);
+        }
       }
       else if (strncmp(cmd, "LORA", 4) == 0)
       {
@@ -792,12 +796,18 @@ static void rs485_task(void *pvParameter)
           vTaskDelay(pdMS_TO_TICKS(100));
           gsm_port_set_airplane_mode(true);
         }
-        
+
         gps_init_all();
         lora_start_rover();
         RS485_Send("+GUGUSTART-LORA", strlen("+GUGUSTART-LORA"));
         active_status = RTK_ACTIVE_STATUS_LORA;
         is_gugu_started = true;
+
+        // Start GPS send timer (50ms period)
+        if (gps_send_timer != NULL)
+        {
+          xTimerStart(gps_send_timer, 0);
+        }
       }
       else
       {
@@ -806,6 +816,12 @@ static void rs485_task(void *pvParameter)
     }
     else if (strncmp(rx_buffer, "AT+GUGUSTOP", 11) == 0)
     {
+      // Stop GPS send timer
+      if (gps_send_timer != NULL)
+      {
+        xTimerStop(gps_send_timer, 0);
+      }
+
       if(active_status == RTK_ACTIVE_STATUS_LORA)
       {
         lora_instance_deinit();
@@ -872,7 +888,20 @@ void rs485_app_init(void)
 {
   rs485_tx_mutex = xSemaphoreCreateMutex();
   xTaskCreate(rs485_task, "RS485_Task", 512, NULL, tskIDLE_PRIORITY + 1, NULL);
-  xTaskCreate(send_gps_task, "send_gps", 512, NULL, tskIDLE_PRIORITY + 1, NULL);
+
+  // Create GPS send software timer (50ms period, auto-reload)
+  gps_send_timer = xTimerCreate(
+    "GPS_Send_Timer",           // Timer name
+    pdMS_TO_TICKS(50),          // Timer period (50ms)
+    pdTRUE,                     // Auto-reload
+    NULL,                       // Timer ID (not used)
+    gps_send_timer_callback     // Callback function
+  );
+
+  if (gps_send_timer == NULL)
+  {
+    LOG_ERR("Failed to create GPS send timer");
+  }
 }
 
 #endif
