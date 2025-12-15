@@ -167,23 +167,26 @@ static void at_read_config_handler(const char *param)
 
 static void at_set_baseline_handler(const char *param)
 {
-    LOG_INFO("Baseline param received: [%s]", param);
+    LOG_INFO("param=[%s], addr=%p", param, param);
+
+    // 바이트 단위로 출력
+    for (int i = 0; i < 10 && param[i] != '\0'; i++) {
+        LOG_INFO("param[%d] = 0x%02X ('%c')", i, (unsigned char)param[i], param[i]);
+    }
 
     char *endptr = NULL;
     float baseline_value = strtof(param, &endptr);
 
-    LOG_INFO("Parsed baseline value: %f, endptr: %p", baseline_value, endptr);
+    LOG_INFO("strtof result: %f (0x%08X)", baseline_value, *(uint32_t*)&baseline_value);
 
-    if (endptr != param && baseline_value > 0)
+    if (endptr != param && baseline_value > 0 && baseline_value < 10000)
     {
         flash_params_set_baseline_len(baseline_value);
         gps_set_heading_length();
-
         RS485_AT_RESP_SEND_OK();
     }
     else
     {
-        LOG_ERR("Invalid baseline value - param: [%s], parsed: %f", param, baseline_value);
         RS485_AT_RESP_SEND_PARAM_ERR();
     }
 }
