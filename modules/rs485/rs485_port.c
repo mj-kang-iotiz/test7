@@ -230,7 +230,19 @@ void USART5_IRQHandler(void) {
 
 void DMA1_Stream0_IRQHandler(void)
 {
-
+  /* DMA 에러 처리 */
+  if (LL_DMA_IsActiveFlag_TE0(DMA1)) {
+    LL_DMA_ClearFlag_TE0(DMA1);
+    LOG_ERR("RS485 DMA Transfer Error");
+  }
+  if (LL_DMA_IsActiveFlag_FE0(DMA1)) {
+    LL_DMA_ClearFlag_FE0(DMA1);
+    LOG_ERR("RS485 DMA FIFO Error");
+  }
+  if (LL_DMA_IsActiveFlag_DME0(DMA1)) {
+    LL_DMA_ClearFlag_DME0(DMA1);
+    LOG_ERR("RS485 DMA Direct Mode Error");
+  }
 }
 
 #endif
