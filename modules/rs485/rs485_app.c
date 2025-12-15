@@ -97,22 +97,26 @@ static void rs485_tx_task(void *pvParameter) {
 
   while (1) {
      if (xQueueReceive(inst->tx_queue, &tx_req, portMAX_DELAY) == pdTRUE) {
-      LOG_DEBUG("RS485 Sending %d bytes", tx_req.len);
+      LOG_DEBUG("RS485 TX: Sending %d bytes", tx_req.len);
+      LOG_DEBUG("RS485 TX: Trying to take mutex");
 
       xSemaphoreTake(inst->mutex, portMAX_DELAY);
+      LOG_DEBUG("RS485 TX: Mutex acquired");
 
       if (inst->rs485.ops && inst->rs485.ops->send) {
         if (inst->rs485.ops->tx_enable) {
           inst->rs485.ops->tx_enable();
         }
 
+        LOG_DEBUG("RS485 TX: Starting UART send");
         inst->rs485.ops->send(tx_req.data, tx_req.len);
+        LOG_DEBUG("RS485 TX: UART send complete");
 
         if (inst->rs485.ops->rx_enable) {
           inst->rs485.ops->rx_enable();
         }
 
-        LOG_DEBUG("RS485 TX complete");
+        LOG_DEBUG("RS485 TX: Complete, releasing mutex");
       } else {
         LOG_ERR("RS485 send ops not available");
       }
@@ -138,9 +142,12 @@ static void rs485_rx_task(void *pvParameter) {
   rs485_send("+READY\r", strlen("+READY\r"));
 
   while (1) {
+    LOG_DEBUG("RS485 RX: Waiting for queue");
     xQueueReceive(inst->rx_queue, &dummy, portMAX_DELAY);
+    LOG_DEBUG("RS485 RX: Queue received, trying to take mutex");
 
     xSemaphoreTake(inst->mutex, portMAX_DELAY);
+    LOG_DEBUG("RS485 RX: Mutex acquired");
 
     pos = rs485_port_get_rx_pos();
     char *rs485_recv = rs485_port_get_recv_buf();

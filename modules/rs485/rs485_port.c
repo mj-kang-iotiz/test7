@@ -151,14 +151,26 @@ int rs485_uart5_hw_init(void) {
 }
 
 int rs485_uart5_send(const char *data, size_t len) {
+  uint32_t timeout;
+
   for (int i = 0; i < len; i++) {
-    while (!LL_USART_IsActiveFlag_TXE(UART5))
-      ;
+    timeout = 100000; // Timeout counter
+    while (!LL_USART_IsActiveFlag_TXE(UART5)) {
+      if (--timeout == 0) {
+        LOG_ERR("RS485 TX timeout waiting for TXE");
+        return -1;
+      }
+    }
     LL_USART_TransmitData8(UART5, *(data + i));
   }
 
-  while (!LL_USART_IsActiveFlag_TC(UART5))
-    ;
+  timeout = 100000; // Timeout counter
+  while (!LL_USART_IsActiveFlag_TC(UART5)) {
+    if (--timeout == 0) {
+      LOG_ERR("RS485 TX timeout waiting for TC");
+      return -1;
+    }
+  }
 
   return 0;
 }
