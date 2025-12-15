@@ -203,12 +203,10 @@ static const rs485_hal_ops_t rs485_uart5_ops = {
 };
 
 
-#if defined(BOARD_TYPE_ROVER_UNICORE) || defined(BOARD_TYPE_ROVER_UBLOX)
 /**
- * @brief This function handles USART3 global interrupt.
+ * @brief This function handles UART5 global interrupt.
  */
 void USART5_IRQHandler(void) {
-    /* USER CODE BEGIN USART3_IRQn 0 */
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
   if (LL_USART_IsActiveFlag_IDLE(UART5)) {
@@ -218,7 +216,6 @@ void USART5_IRQHandler(void) {
     }
     LL_USART_ClearFlag_IDLE(UART5);
   }
-
 
   if (LL_USART_IsActiveFlag_PE(UART5)) {
     LL_USART_ClearFlag_PE(UART5);
@@ -234,18 +231,12 @@ void USART5_IRQHandler(void) {
   }
 
   portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
-  /* USER CODE END USART3_IRQn 0 */
-  /* USER CODE BEGIN USART3_IRQn 1 */
-
-  /* USER CODE END USART3_IRQn 1 */
 }
 
 void DMA1_Stream0_IRQHandler(void)
 {
-
+  /* DMA errors are handled here if needed */
 }
-
-#endif
 
 int rs485_port_init_instance(rs485_t *rs485_handle) {
   const board_config_t *config = board_get_config();
