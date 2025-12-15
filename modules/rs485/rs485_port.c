@@ -151,6 +151,9 @@ int rs485_uart5_hw_init(void) {
 }
 
 int rs485_uart5_send(const char *data, size_t len) {
+  LOG_DEBUG("RS485 UART5 Send: %d bytes, UART5 enabled=%d", len,
+            LL_USART_IsEnabled(UART5));
+
   for (int i = 0; i < len; i++) {
     while (!LL_USART_IsActiveFlag_TXE(UART5))
       ;
@@ -160,19 +163,27 @@ int rs485_uart5_send(const char *data, size_t len) {
   while (!LL_USART_IsActiveFlag_TC(UART5))
     ;
 
+  LOG_DEBUG("RS485 UART5 Send complete");
   return 0;
 }
 
 void rs485_tx_enable()
 {
+    LOG_DEBUG("RS485 TX Enable: Setting DE=1, RE=1");
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_SET); // DE
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, GPIO_PIN_SET); // /RE
 
     delay_us(5);
+
+    // Verify pin states
+    GPIO_PinState de_state = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_10);
+    GPIO_PinState re_state = HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_11);
+    LOG_DEBUG("RS485 Pin states: DE=%d, RE=%d", de_state, re_state);
 }
 
 void rs485_rx_enable()
 {
+    LOG_DEBUG("RS485 RX Enable: Setting DE=0, RE=0");
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_RESET); // DE
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_11, GPIO_PIN_RESET); // /RE
 
