@@ -45,19 +45,19 @@ static void at_set_rtk_start_handler(const char *param);
 static void at_set_rtk_stop_handler(const char *param);
 
 static const at_cmd_entry_t at_cmd_table[] = {
-    {"AT", at_handler},
-    {"ATZ", atz_handler},
-    {"AT&Z", atandz_handler},
-    {"AT+VER?", at_ver_handler},
-    {"AT+GPSMANUF?", at_gps_manuf_handler},
-    {"AT+CONFIG?", at_read_config_handler},
     {"AT+SETBASELINE:", at_set_baseline_handler},
-    {"AT+CASTER:", at_set_ntrip_ip_handler},
-    {"AT+ID=", at_set_ntrip_id_handler},
     {"AT+MOUNTPOINT=", at_set_ntrip_mountpoint_handler},
-    {"AT+PASSWD=", at_set_ntrip_passwd_handler},
+    {"AT+GPSMANUF?", at_gps_manuf_handler},
     {"AT+GUGUSTART", at_set_rtk_start_handler},
     {"AT+GUGUSTOP", at_set_rtk_stop_handler},
+    {"AT+CONFIG?", at_read_config_handler},
+    {"AT+CASTER:", at_set_ntrip_ip_handler},
+    {"AT+PASSWD=", at_set_ntrip_passwd_handler},
+    {"AT+VER?", at_ver_handler},
+    {"AT+ID=", at_set_ntrip_id_handler},
+    {"AT&Z", atandz_handler},
+    {"ATZ", atz_handler},
+    {"AT", at_handler},
     {NULL, NULL}};
 
 volatile bool base_init_finish = false;
@@ -148,7 +148,7 @@ static void at_read_config_handler(const char *param)
 
     char resp_str[256];
 
-    sprintf(resp_str, sizeof(resp_str),
+    snprintf(resp_str, sizeof(resp_str),
              "+CONFIG=%s,%s,%s,%s,%s,%s,%s,%s,%s,%lf,%s\r",
              params->ntrip_url,
              params->ntrip_port,
@@ -245,18 +245,18 @@ static void at_set_ntrip_id_handler(const char *param)
 static void at_set_ntrip_mountpoint_handler(const char *param)
 {
     user_params_t *params = flash_params_get_current();
-    char mountpoint[32];
+    char mountpoint[64];
 
-    sprintf(mountpoint, "+MOUNTPOINT=%s\r", params->ntrip_mountpoint);
+    snprintf(mountpoint, sizeof(mountpoint), "+MOUNTPOINT=%s\r", params->ntrip_mountpoint);
     RS485_AT_RESP_SEND(mountpoint);
 }
 
 static void at_set_ntrip_passwd_handler(const char *param)
 {
     user_params_t *params = flash_params_get_current();
-    char passwd[32];
+    char passwd[64];
 
-    sprintf("+PASSWORD=%s\r", params->ntrip_pw);
+    snprintf(passwd, sizeof(passwd), "+PASSWORD=%s\r", params->ntrip_pw);
     RS485_AT_RESP_SEND(passwd);
 }
 

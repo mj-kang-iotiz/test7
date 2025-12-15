@@ -83,6 +83,7 @@ typedef struct {
   gps_cmd_request_t *current_cmd_req;
 
   gps_fix_t last_fix;
+  uint8_t gga_ntrip_counter; // NTRIP GGA 전송 1Hz 제한용 (20Hz 중 1개만)
 } gps_instance_t;
 
 static gps_instance_t gps_instances[GPS_ID_MAX] = {0};
@@ -240,9 +241,9 @@ static const char *um982_rover_cmds[] = {
   "unmask GLO\r\n",
   "unmask GAL\r\n",
   "unmask QZSS\r\n",
-  "gpgga com1 1\r\n",
+  "gpgga com1 20\r\n",
   // "gpgsv com1 1\r\n",
-  "gpths com1 1\r\n",
+  "gpths com1 20\r\n",
   // "OBSVHA COM1 1\r\n", // slave antenna
   "BESTNAVB 1\r\n",
   "CONFIG HEADING FIXLENGTH\r\n"
@@ -544,23 +545,30 @@ void gps_evt_handler(gps_t *gps, gps_event_t event, gps_procotol_t protocol,
 
       if (gps->nmea_data.gga_is_rdy)
       {
-        if(config->board == BOARD_TYPE_ROVER_F9P)
+        // NTRIP GGA 전송: 20Hz → 1Hz로 제한 (20개 중 1개만 전송)
+        inst->gga_ntrip_counter++;
+        if (inst->gga_ntrip_counter >= 20)
         {
-          if(inst->id == GPS_ID_BASE)
+          inst->gga_ntrip_counter = 0;
+
+          if(config->board == BOARD_TYPE_ROVER_F9P)
           {
-            if(ntrip_gga_send_queue_initialized() && gps->nmea_data.gga.fix >= GPS_FIX_GPS) 
+            if(inst->id == GPS_ID_BASE)
             {
-              ntrip_send_gga_data(gps->nmea_data.gga_raw,
-                               gps->nmea_data.gga_raw_pos);
+              if(ntrip_gga_send_queue_initialized() && gps->nmea_data.gga.fix >= GPS_FIX_GPS)
+              {
+                ntrip_send_gga_data(gps->nmea_data.gga_raw,
+                                 gps->nmea_data.gga_raw_pos);
+              }
             }
           }
-        }
-        else
-        {
-          if(ntrip_gga_send_queue_initialized() && gps->nmea_data.gga.fix >= GPS_FIX_GPS)
+          else
           {
-            ntrip_send_gga_data(gps->nmea_data.gga_raw,
-                              gps->nmea_data.gga_raw_pos);
+            if(ntrip_gga_send_queue_initialized() && gps->nmea_data.gga.fix >= GPS_FIX_GPS)
+            {
+              ntrip_send_gga_data(gps->nmea_data.gga_raw,
+                                gps->nmea_data.gga_raw_pos);
+            }
           }
         }
       } 
