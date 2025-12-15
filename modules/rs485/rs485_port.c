@@ -224,23 +224,30 @@ static const rs485_hal_ops_t rs485_uart5_ops = {
 };
 
 
+// ISR debugging - use simple flag instead of LOG to avoid ISR overhead
+static volatile uint32_t uart5_isr_count = 0;
+static volatile uint32_t uart5_idle_count = 0;
+static volatile uint32_t uart5_queue_send_count = 0;
+
 /**
  * @brief This function handles UART5 global interrupt.
+ * NOTE: Correct handler name is UART5_IRQHandler (not USART5_IRQHandler)!
  */
+#if !defined(BOARD_TYPE_BASE_UNICORE) && !defined(BOARD_TYPE_BASE_UBLOX)
+// Only define for ROVER boards (BASE boards use BLE on UART5)
 __attribute__((used))
-void USART5_IRQHandler(void) {
+void UART5_IRQHandler(void) {
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
-  LOG_DEBUG("UART5 IRQ triggered");
+  uart5_isr_count++;
 
   if (LL_USART_IsActiveFlag_IDLE(UART5)) {
-    LOG_DEBUG("UART5 IDLE flag set");
+    uart5_idle_count++;
+
     if (rs485_queues[0] != NULL) {
       uint8_t dummy = 0;
       xQueueSendFromISR(rs485_queues[0], &dummy, &xHigherPriorityTaskWoken);
-      LOG_DEBUG("UART5 queue sent from ISR");
-    } else {
-      LOG_DEBUG("UART5 queue is NULL!");
+      uart5_queue_send_count++;
     }
     LL_USART_ClearFlag_IDLE(UART5);
   }
@@ -260,6 +267,7 @@ void USART5_IRQHandler(void) {
 
   portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
+#endif
 
 void DMA1_Stream0_IRQHandler(void)
 {
@@ -320,4 +328,9 @@ char *rs485_port_get_recv_buf()
 
 void rs485_port_set_queue(QueueHandle_t queue) {
     rs485_queues[0] = queue;
+}
+
+void rs485_port_print_isr_stats(void) {
+    LOG_INFO("UART5 ISR Stats - Total: %lu, IDLE: %lu, Queue sends: %lu",
+             uart5_isr_count, uart5_idle_count, uart5_queue_send_count);
 }

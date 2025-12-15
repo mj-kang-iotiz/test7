@@ -141,9 +141,18 @@ static void rs485_rx_task(void *pvParameter) {
   vTaskDelay(pdMS_TO_TICKS(2900));
   rs485_send("+READY\r", strlen("+READY\r"));
 
+  LOG_INFO("RS485 RX: Entering main loop, ready to receive");
+
   while (1) {
     LOG_DEBUG("RS485 RX: Waiting for queue");
-    xQueueReceive(inst->rx_queue, &dummy, portMAX_DELAY);
+
+    // Wait for queue with timeout to allow periodic ISR stats check
+    if (xQueueReceive(inst->rx_queue, &dummy, pdMS_TO_TICKS(5000)) != pdTRUE) {
+      // Timeout - print ISR stats for debugging
+      rs485_port_print_isr_stats();
+      continue;
+    }
+
     LOG_DEBUG("RS485 RX: Queue received, trying to take mutex");
 
     xSemaphoreTake(inst->mutex, portMAX_DELAY);

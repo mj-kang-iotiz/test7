@@ -15,5 +15,6 @@ uint32_t rs485_port_get_rx_pos(void);
 char *rs485_port_get_recv_buf(void);
 
 void rs485_port_set_queue(QueueHandle_t queue);
+void rs485_port_print_isr_stats(void);
 
 #endif
