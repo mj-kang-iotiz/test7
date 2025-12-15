@@ -90,9 +90,7 @@ static void at_handler(const char *param)
 
 static void atz_handler(const char *param)
 {
-    xSemaphoreTake(rs485_get_instance()->mutex, portMAX_DELAY);
-    rs485_get_handle()->ops->send("+RESET\r", 7);
-    xSemaphoreGive(rs485_get_instance()->mutex);
+    RS485_AT_RESP_SEND("+RESET\r");
 
     vTaskDelay(pdMS_TO_TICKS(500));
 
