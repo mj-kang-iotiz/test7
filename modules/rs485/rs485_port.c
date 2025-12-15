@@ -122,6 +122,19 @@ static void rs485_uart5_init(void)
 }
 
 int rs485_uart5_comm_start(void) {
+  LOG_INFO("RS485 UART5 communication starting");
+
+  // First, enable UART
+  LL_USART_Enable(UART5);
+
+  // Clear any pending flags
+  LL_USART_ClearFlag_IDLE(UART5);
+  LL_USART_ClearFlag_PE(UART5);
+  LL_USART_ClearFlag_FE(UART5);
+  LL_USART_ClearFlag_ORE(UART5);
+  LL_USART_ClearFlag_NE(UART5);
+
+  // Setup DMA
   LL_DMA_SetPeriphAddress(DMA1, LL_DMA_STREAM_0, (uint32_t)&UART5->DR);
   LL_DMA_SetMemoryAddress(DMA1, LL_DMA_STREAM_0,
                           (uint32_t)&rs485_recv_buf[0]);
@@ -130,14 +143,22 @@ int rs485_uart5_comm_start(void) {
   LL_DMA_EnableIT_TE(DMA1, LL_DMA_STREAM_0);
   LL_DMA_EnableIT_FE(DMA1, LL_DMA_STREAM_0);
   LL_DMA_EnableIT_DME(DMA1, LL_DMA_STREAM_0);
+  LL_DMA_EnableStream(DMA1, LL_DMA_STREAM_0);
 
+  // Enable DMA request from UART
+  LL_USART_EnableDMAReq_RX(UART5);
+
+  // Enable UART interrupts AFTER UART is enabled
   LL_USART_EnableIT_IDLE(UART5);
   LL_USART_EnableIT_PE(UART5);
   LL_USART_EnableIT_ERROR(UART5);
-  LL_USART_EnableDMAReq_RX(UART5);
 
-  LL_DMA_EnableStream(DMA1, LL_DMA_STREAM_0);
-  LL_USART_Enable(UART5);
+  // Verify interrupt is enabled
+  uint32_t cr1 = UART5->CR1;
+  LOG_INFO("RS485 UART5 CR1 = 0x%08lX", cr1);
+  LOG_INFO("RS485 UART5 IDLEIE bit = %d", (cr1 & USART_CR1_IDLEIE) ? 1 : 0);
+  LOG_INFO("RS485 UART5 UE bit = %d", (cr1 & USART_CR1_UE) ? 1 : 0);
+  LOG_INFO("RS485 UART5 communication started, IDLE IT enabled");
 
   return 0;
 }
@@ -206,13 +227,20 @@ static const rs485_hal_ops_t rs485_uart5_ops = {
 /**
  * @brief This function handles UART5 global interrupt.
  */
+__attribute__((used))
 void USART5_IRQHandler(void) {
   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 
+  LOG_DEBUG("UART5 IRQ triggered");
+
   if (LL_USART_IsActiveFlag_IDLE(UART5)) {
+    LOG_DEBUG("UART5 IDLE flag set");
     if (rs485_queues[0] != NULL) {
       uint8_t dummy = 0;
       xQueueSendFromISR(rs485_queues[0], &dummy, &xHigherPriorityTaskWoken);
+      LOG_DEBUG("UART5 queue sent from ISR");
+    } else {
+      LOG_DEBUG("UART5 queue is NULL!");
     }
     LL_USART_ClearFlag_IDLE(UART5);
   }

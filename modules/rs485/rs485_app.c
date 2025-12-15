@@ -223,6 +223,7 @@ void rs485_init_all(void) {
     return;
   }
 
+  LOG_INFO("RS485 큐와 뮤텍스 생성 완료, UART 통신 시작");
   rs485_port_start(&rs485_instance.rs485);
 
   BaseType_t ret = xTaskCreate(rs485_rx_task, "rs485_rx", 512,
