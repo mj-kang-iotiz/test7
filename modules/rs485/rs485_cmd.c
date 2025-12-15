@@ -127,11 +127,11 @@ static void at_gps_manuf_handler(const char *param)
 
     if (config->board == BOARD_TYPE_BASE_F9P || config->board == BOARD_TYPE_ROVER_F9P)
     {
-        sprintf(manuf_str, sizeof(manuf_str), "+Ublox\r");
+        snprintf(manuf_str, sizeof(manuf_str), "+Ublox\r");
     }
     else if (config->board == BOARD_TYPE_BASE_UM982 || config->board == BOARD_TYPE_ROVER_UM982)
     {
-        sprintf(manuf_str, sizeof(manuf_str), "+Unicore\r");
+        snprintf(manuf_str, sizeof(manuf_str), "+Unicore\r");
     }
     else
     {
@@ -167,19 +167,25 @@ static void at_read_config_handler(const char *param)
 
 static void at_set_baseline_handler(const char *param)
 {
-    float baseline_value = strtof(param, NULL);
+    LOG_INFO("Baseline param received: [%s]", param);
 
-      if (baseline_value != 0)
-      {
+    char *endptr = NULL;
+    float baseline_value = strtof(param, &endptr);
+
+    LOG_INFO("Parsed baseline value: %f, endptr: %p", baseline_value, endptr);
+
+    if (endptr != param && baseline_value > 0)
+    {
         flash_params_set_baseline_len(baseline_value);
         gps_set_heading_length();
 
         RS485_AT_RESP_SEND_OK();
-      }
-      else
-      {
+    }
+    else
+    {
+        LOG_ERR("Invalid baseline value - param: [%s], parsed: %f", param, baseline_value);
         RS485_AT_RESP_SEND_PARAM_ERR();
-      }
+    }
 }
 
 static void at_set_ntrip_ip_handler(const char *param)
