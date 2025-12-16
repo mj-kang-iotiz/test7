@@ -817,23 +817,21 @@ static void rs485_task(void *pvParameter)
       }
       else if(active_status == RTK_ACTIVE_STATUS_GSM)
       {
+        // LTE 초기화 완료 여부와 관계없이 stop 처리
+        is_gugu_started = false;
+
+        // NTRIP은 LTE 초기화가 완료된 경우에만 중지 (아직 시작 안 됐으면 무시)
         if(lte_get_init_state() == LTE_INIT_DONE)
         {
-          // gsm 초기화
-          is_gugu_started = false;
           ntrip_stop();
           vTaskDelay(pdMS_TO_TICKS(100));
-          gsm_port_set_airplane_mode(true);
+        }
 
-          gps_cleanup_all();
-          vTaskDelay(pdMS_TO_TICKS(100));  // 100ms 대기 권장;
-          active_status = RTK_ACTIVE_STATUS_NONE;
-          RS485_Send((uint8_t *)STOP_Response, strlen(STOP_Response));
-        }
-        else
-        {
-          RS485_Send(ERROR3_Response, strlen(ERROR3_Response));
-        }
+        gsm_port_set_airplane_mode(true);
+        gps_cleanup_all();
+        vTaskDelay(pdMS_TO_TICKS(100));  // 100ms 대기 권장
+        active_status = RTK_ACTIVE_STATUS_NONE;
+        RS485_Send((uint8_t *)STOP_Response, strlen(STOP_Response));
       }
       else
       {
