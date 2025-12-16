@@ -90,13 +90,9 @@ static void at_handler(const char *param)
 
 static void atz_handler(const char *param)
 {
-    xSemaphoreTake(rs485_get_instance()->mutex, portMAX_DELAY);
-    rs485_get_handle()->ops->tx_enable();   // TX 모드 활성화
-    rs485_get_handle()->ops->send("+RESET\r", 7);
-    rs485_get_handle()->ops->rx_enable();   // RX 모드로 복귀
-    xSemaphoreGive(rs485_get_instance()->mutex);
+    RS485_AT_RESP_SEND("+RESET\r");
 
-    vTaskDelay(pdMS_TO_TICKS(100));
+    vTaskDelay(pdMS_TO_TICKS(500));
 
     HAL_NVIC_SystemReset();
 }
