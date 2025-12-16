@@ -14,15 +14,16 @@
 #define COLOR_GREEN "\033[32m"
 #define COLOR_RESET "\033[0m"
 
-typedef enum {
-  LOG_LEVEL_NONE = 0,
-  LOG_LEVEL_ERROR = 1,
-  LOG_LEVEL_WARNING = 2,
-  LOG_LEVEL_INFO = 3,
-  LOG_LEVEL_DEBUG = 4,
-} log_level_t;
+// 로그 레벨 (전처리기에서 사용하기 위해 매크로로 정의)
+#define LOG_LEVEL_NONE    0
+#define LOG_LEVEL_ERROR   1
+#define LOG_LEVEL_WARNING 2
+#define LOG_LEVEL_INFO    3
+#define LOG_LEVEL_DEBUG   4
 
+#ifndef LOG_LEVEL
 #define LOG_LEVEL LOG_LEVEL_NONE
+#endif
 
 #if LOG_LEVEL >= LOG_LEVEL_DEBUG
 #define LOG_DEBUG(fmt, ...)                                                    \
