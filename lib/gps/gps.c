@@ -164,9 +164,6 @@ void gps_parse_process(gps_t *gps, const void *data, size_t len) {
      * 다르게 파싱하게끔 만들기 */
     if (gps->protocol == GPS_PROTOCOL_NONE) {
       if (*d == '$') {
-        memset(gps->nmea.term_str, 0, sizeof(gps->nmea.term_str));
-        gps->nmea.term_pos = 0;
-        gps->nmea.term_num = 0;
         memset(&gps->nmea, 0, sizeof(gps->nmea));
 
         gps->protocol = GPS_PROTOCOL_NMEA;
@@ -213,9 +210,6 @@ void gps_parse_process(gps_t *gps, const void *data, size_t len) {
         gps->state = GPS_PARSE_STATE_NONE;
 
         if (*d == '$') {
-          memset(gps->nmea.term_str, 0, sizeof(gps->nmea.term_str));
-          gps->nmea.term_pos = 0;
-          gps->nmea.term_num = 0;
           memset(&gps->nmea, 0, sizeof(gps->nmea));
           gps->protocol = GPS_PROTOCOL_NMEA;
           gps->state = GPS_PARSE_STATE_NMEA_START;
